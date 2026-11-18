@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChargeFlow · EV charging hub allocator</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M18 2 6 18h8l-2 12 12-16h-8z' fill='%2300a37a'/></svg>">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" class="logo" aria-hidden="true"><path d="M18 2 6 18h8l-2 12 12-16h-8z"/></svg>
+    <div>
+      <h1>ChargeFlow</h1>
+      <p>EV charging hub slot allocator · Edmonds–Karp max-flow · Bloom-filter registry · randomized Quickselect</p>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="plan" role="tab">1 · Plan</button>
+    <button class="tab" data-tab="results" role="tab">2 · Results</button>
+    <button class="tab" data-tab="registry" role="tab">3 · Registry</button>
+    <button class="tab" data-tab="bench" role="tab">4 · Benchmarks</button>
+    <button class="tab" data-tab="about" role="tab">How it works</button>
+  </nav>
+</header>
+
+<div id="banner" class="banner hidden" role="alert"></div>
+
+<main>
+<!-- ============================================================ PLAN -->
+<section id="tab-plan" class="tabpane active">
+  <div class="grid two">
+    <div class="card">
+      <div class="card-h"><h2>Hub</h2>
+        <div class="row gap">
+          <label class="btn ghost small">Load hub JSON<input type="file" id="hubFile" accept=".json" hidden></label>
+          <button class="btn ghost small" id="hubReset">Default hub</button>
+        </div>
+      </div>
+      <div class="form">
+        <label>Name <input id="hubName"></label>
+        <div class="row gap">
+          <label>Opens <input id="hubOpen" type="time" step="300"></label>
+          <label>Slot (min) <input id="hubSlotMin" type="number" min="5" max="240"></label>
+          <label>Slots <input id="hubSlots" type="number" min="1" max="288"></label>
+        </div>
+        <p class="muted small" id="hubHours"></p>
+        <table class="mini">
+          <thead><tr><th>Connector</th><th>Modules</th><th>Power kW</th></tr></thead>
+          <tbody id="typeRows"></tbody>
+        </table>
+        <div class="sub-h"><h3>Maintenance windows</h3><button class="btn ghost small" id="addMaint">+ add</button></div>
+        <table class="mini"><thead><tr><th>Charger</th><th>From</th><th>To</th><th></th></tr></thead><tbody id="maintRows"></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Vehicles <span class="pill" id="vehCount">0</span></h2>
+        <div class="row gap">
+          <select id="sampleSel" class="small">
+            <option value="">Load sample…</option>
+            <option value="vehicles_demo_220.csv">Demo day · 220 vehicles</option>
+            <option value="small">Hand-check · greedy trap (small hub)</option>
+            <option value="vehicles_invalid.csv">Invalid rows (validation demo)</option>
+          </select>
+          <label class="btn ghost small">Upload CSV<input type="file" id="csvFile" accept=".csv,text/csv" hidden></label>
+          <button class="btn ghost small" id="csvDownload" disabled>Download CSV</button>
+        </div>
+      </div>
+      <div class="row gap wrap generator">
+        <label>Generate <input id="genCount" type="number" value="220" min="1" max="20000"> vehicles</label>
+        <label>seed <input id="genSeed" type="number" value="2026"></label>
+        <label>subscribers <input id="genReg" type="number" value="0.4" step="0.05" min="0" max="1"></label>
+        <button class="btn" id="genBtn">Generate</button>
+      </div>
+      <div id="vehMix" class="mix"></div>
+      <div class="tablewrap short"><table class="data" id="vehTable"><thead></thead><tbody></tbody></table></div>
+      <p class="muted small">CSV columns: <code>plate, model, connector, arrival, departure, energy_kwh, battery_pct, max_charge_kw, category</code></p>
+    </div>
+  </div>
+
+  <div class="card run">
+    <div class="row gap wrap center">
+      <label>Algorithm
+        <select id="algo">
+          <option value="EDMONDS_KARP">Edmonds–Karp max-flow (recommended)</option>
+          <option value="FORD_FULKERSON_DFS">Ford–Fulkerson DFS max-flow</option>
+          <option value="GREEDY">Greedy first-come-first-served (baseline)</option>
+        </select>
+      </label>
+      <label>Priority tier <input id="prio" type="range" min="0" max="0.6" step="0.05" value="0.2"> <b id="prioVal">20%</b></label>
+      <label>Quickselect seed <input id="seed" type="number" value="42"></label>
+      <label class="check"><input id="cmp" type="checkbox" checked> compare with greedy baseline</label>
+      <button class="btn primary big" id="runBtn">Run allocation ⚡</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ RESULTS -->
+<section id="tab-results" class="tabpane">
+  <div id="noResult" class="empty">Run an allocation from the Plan tab to see results.</div>
+  <div id="result" class="hidden">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid two">
+      <div class="card"><div class="card-h"><h2>Max-flow vs greedy baseline</h2></div><div id="cmpChart"></div><p class="muted small" id="cmpNote"></p></div>
+      <div class="card"><div class="card-h"><h2>Why this is optimal: min-cut</h2></div><p id="cutText"></p>
+        <dl class="stats" id="algoStats"></dl></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Capacity heat-map</h2><span class="muted small">cell = modules used / available · outlined = binding (on the min cut) · number = vehicles parked that could use it</span></div>
+      <div id="heat" class="scrollx"></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Module schedule</h2>
+        <span class="legend"><i class="lg em"></i>Emergency <i class="lg fl"></i>Fleet <i class="lg pv"></i>Private <i class="lg dn"></i>Maintenance · tier-1 cells are bold-edged</span></div>
+      <div id="gantt" class="scrollx"></div>
+      <p class="muted small" id="ganttHint">Hover a cell for details; click it to find the vehicle below.</p>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Vehicles</h2>
+        <div class="row gap">
+          <input id="vehSearch" placeholder="search plate / model" class="small">
+          <select id="vehFilter" class="small"><option value="">all statuses</option><option>FULL</option><option>PARTIAL</option><option>UNSERVED</option><option>INFEASIBLE</option></select>
+          <select id="tierFilter" class="small"><option value="">all tiers</option><option value="1">tier 1</option><option value="2">tier 2</option></select>
+        </div></div>
+      <div class="tablewrap"><table class="data" id="outTable"><thead></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card" id="warnCard"><div class="card-h"><h2>Warnings <span class="pill" id="warnCount"></span></h2></div><ul id="warnings" class="warnings"></ul></div>
+  </div>
+</section>
+
+<!-- ============================================================ REGISTRY -->
+<section id="tab-registry" class="tabpane">
+  <div class="grid two">
+    <div class="card">
+      <div class="card-h"><h2>Subscriber registry (Bloom filter + exact store)</h2></div>
+      <dl class="stats" id="regStats"></dl>
+      <div class="sub-h"><h3>Rebuild</h3></div>
+      <div class="row gap wrap">
+        <label>plates <input id="regSize" type="number" value="50000" min="1" max="2000000"></label>
+        <label>target FPR <input id="regFpr" type="number" value="0.01" step="0.005" min="0.0001" max="0.49"></label>
+        <button class="btn" id="regGen">Generate synthetic</button>
+        <label class="btn ghost">Upload plates CSV<input type="file" id="regFile" accept=".csv,.txt" hidden></label>
+      </div>
+      <p class="muted small">Rebuilding the registry changes which generated plates are subscribers. Regenerate vehicles afterwards.</p>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Check a plate</h2></div>
+      <div class="row gap"><input id="plateIn" placeholder="e.g. MH12AB1234"><button class="btn" id="plateBtn">Check</button></div>
+      <div id="plateOut" class="check-out"></div>
+      <div class="sub-h"><h3>Empirical vs theoretical false-positive rate</h3><button class="btn ghost small" id="fprBtn">Run experiment</button></div>
+      <div id="fprChart"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ BENCH -->
+<section id="tab-bench" class="tabpane">
+  <div class="card">
+    <div class="card-h"><h2>Live benchmarks (quick sizes, run on this server)</h2>
+      <div class="row gap">
+        <button class="btn" data-bench="flow">Max-flow vs greedy</button>
+        <button class="btn" data-bench="selection">Quickselect vs sort</button>
+        <button class="btn" data-bench="bloom">Bloom vs HashSet</button>
+      </div></div>
+    <p class="muted small">The full suite (more sizes, more repetitions) is <code>./mvnw -q compile exec:java</code>, which writes <code>benchmarks/results.md</code>.</p>
+    <div id="benchOut"></div>
+  </div>
+</section>
+
+<!-- ============================================================ ABOUT -->
+<section id="tab-about" class="tabpane">
+  <div class="card prose">
+    <h2>The problem</h2>
+    <p>An urban charging hub has a fixed number of charging modules per connector type (CCS2, Type 2 AC, Bharat DC-001). On a busy day more vehicles arrive than the hub can fully charge. Each vehicle is parked for a known window and needs a number of 30-minute charging slots. The power cabinet can switch modules between parking bays at slot boundaries. <b>Goal:</b> deliver as many charging slots (kWh) as possible, protect a priority tier (emergency, fleet, low-battery, tight deadline), and explain where capacity is the bottleneck.</p>
+    <h2>Pipeline</h2>
+    <ol>
+      <li><b>Validation</b> (Java): plate format, duplicates, time windows, connector compatibility, hub feasibility.</li>
+      <li><b>Bloom filter</b> (CO5): each plate is screened against the subscriber registry. "Definitely absent" skips the database. "Possibly present" is <i>always</i> confirmed by an exact lookup, so false positives are caught and never trusted.</li>
+      <li><b>Randomized Quickselect</b> (CO5): finds the k-th highest priority score in expected O(n) to split vehicles into tiers, and gives p50/p90 statistics.</li>
+      <li><b>Edmonds–Karp max-flow</b> (CO4): network <code>source → vehicle → (connector, slot) → sink</code>. Tier-1 source arcs are added first and solved, then tier-2 arcs are added and the solver resumes. Augmenting paths never decrease tier-1 flow.</li>
+      <li><b>Min-cut</b>: certifies optimality and lists the binding (connector, slot) pairs.</li>
+      <li><b>Module assignment</b>: maps slot grants to concrete module ids, keeping a vehicle on the same module where possible.</li>
+    </ol>
+    <h2>Honest limits</h2>
+    <ul>
+      <li>Max-flow maximises charging <i>slots</i>, not the <i>number</i> of fully charged vehicles. Maximising fully-served vehicles is a knapsack-like NP-hard objective. We report it, but do not claim to optimise it.</li>
+      <li>Charging may be split into non-contiguous slots (the power-sharing model). Requiring contiguous sessions makes the problem NP-hard (interval scheduling with demands).</li>
+      <li>A slot is all-or-nothing at the vehicle's effective power. Taper near 100% SoC is ignored.</li>
+    </ul>
+  </div>
+</section>
+</main>
+
+<div id="tooltip" class="tooltip hidden"></div>
+<div id="busy" class="busy hidden"><div class="spinner"></div><span id="busyText">Working…</span></div>
+<footer>ChargeFlow · Advanced Algorithms CIA-3 · Daksh Shah (2405709) · Atlas SkillTech University · all algorithms run in the Java backend</footer>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+plate,model,connector,arrival,departure,energy_kwh,battery_pct,max_charge_kw,category
+MH12AB1234,Tata Nexon EV,CCS2,09:00,10:30,22,30,50,PRIVATE
+mh 12 ab-1234,Tata Nexon EV,CCS2,11:00,12:00,20,40,50,PRIVATE
+HELLO123,MG ZS EV,CCS2,09:00,10:00,25,30,76,FLEET
+KA05MN4321,Tata Tiago EV,TYPE2_AC,14:00,12:00,10,30,7.2,PRIVATE
+DL3CAF0001,Hyundai Kona Electric,CCS2,10:00,11:00,0,140,50,EMERGENCY
+GJ01XY9999,Citroen eC3,TYPE2_AC,9.30,11:00,12,30,7.4,PRIVATE
