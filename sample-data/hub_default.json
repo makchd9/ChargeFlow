@@ -1,0 +1,88 @@
+{
+    "name": "Baner EV Hub, Pune",
+    "openTime": "06:00",
+    "slotMinutes": 30,
+    "slotCount": 32,
+    "powerKw": {
+        "CCS2": 60.0,
+        "TYPE2_AC": 7.4,
+        "BHARAT_DC001": 15.0
+    },
+    "chargers": [
+        {
+            "id": "CCS2-01",
+            "connector": "CCS2",
+            "downSlots": []
+        },
+        {
+            "id": "CCS2-02",
+            "connector": "CCS2",
+            "downSlots": []
+        },
+        {
+            "id": "CCS2-03",
+            "connector": "CCS2",
+            "downSlots": [
+                {
+                    "from": 12,
+                    "to": 16
+                }
+            ]
+        },
+        {
+            "id": "CCS2-04",
+            "connector": "CCS2",
+            "downSlots": []
+        },
+        {
+            "id": "CCS2-05",
+            "connector": "CCS2",
+            "downSlots": []
+        },
+        {
+            "id": "CCS2-06",
+            "connector": "CCS2",
+            "downSlots": []
+        },
+        {
+            "id": "AC-01",
+            "connector": "TYPE2_AC",
+            "downSlots": []
+        },
+        {
+            "id": "AC-02",
+            "connector": "TYPE2_AC",
+            "downSlots": []
+        },
+        {
+            "id": "AC-03",
+            "connector": "TYPE2_AC",
+            "downSlots": []
+        },
+        {
+            "id": "AC-04",
+            "connector": "TYPE2_AC",
+            "downSlots": []
+        },
+        {
+            "id": "AC-05",
+            "connector": "TYPE2_AC",
+            "downSlots": []
+        },
+        {
+            "id": "BDC-01",
+            "connector": "BHARAT_DC001",
+            "downSlots": []
+        },
+        {
+            "id": "BDC-02",
+            "connector": "BHARAT_DC001",
+            "downSlots": []
+        },
+        {
+            "id": "BDC-03",
+            "connector": "BHARAT_DC001",
+            "downSlots": []
+        }
+    ]
+}

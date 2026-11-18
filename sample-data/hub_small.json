@@ -1,0 +1,11 @@
+{
+  "name": "Hand-check hub (1 CCS2 + 1 AC)",
+  "openTime": "08:00",
+  "slotMinutes": 60,
+  "slotCount": 4,
+  "powerKw": { "CCS2": 60.0, "TYPE2_AC": 7.4, "BHARAT_DC001": 15.0 },
+  "chargers": [
+    { "id": "CCS2-01", "connector": "CCS2", "downSlots": [] },
+    { "id": "AC-01", "connector": "TYPE2_AC", "downSlots": [] }
+  ]
+}
