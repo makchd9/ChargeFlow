@@ -196,7 +196,7 @@ Both always return the same value (tested). On the allocation network every path
 
 ![sorted](img/select_sorted.png)
 
-Randomized Quickselect is **4–5× faster than sorting** at large n, and its comparisons per element stay bounded (≈3–6.5n across 10⁴–4·10⁶). The deterministic first-pivot version is slightly faster on random data (no RNG) but grows **quadratically on sorted input**: 4× more data costs 16× more time. Ranked score lists are often nearly sorted, so randomisation is the right choice. (`Arrays.sort` detects sorted runs, which is why it is fast on sorted input.)
+Randomized Quickselect is **4.2–5.3× faster than sorting** at n ≥ 10⁶, and its comparisons per element stay bounded (≈3–6.5n across 10⁴–4·10⁶). The deterministic first-pivot version is slightly faster on random data (no RNG) but grows **quadratically on sorted input**: 4× more data costs 16× more time. Ranked score lists are often nearly sorted, so randomisation is the right choice. (`Arrays.sort` detects sorted runs, which is why it is fast on sorted input.)
 
 ### 7.4 Bloom filter vs exact set (target FPR 1%)
 
