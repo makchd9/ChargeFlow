@@ -1,6 +1,6 @@
 # ChargeFlow: Technical Report
 
-**Advanced Algorithms · CIA-3 Real-World Application Project · Semester V, B.Tech CS (AI & ML), 2026–27**
+**Advanced Algorithms · CIA-3 Real-World Application Project · Semester V, B.Tech CS (AI & ML), 2026–27**\
 Daksh Shah · App ID 2405709 · Atlas SkillTech University · individual submission
 
 ---
@@ -29,6 +29,18 @@ The hub uses **dynamic power sharing**: a vehicle stays in its bay for its whole
 
 ## 2. System design
 
+**Separation of concerns.** `algo.*` holds pure, framework-free algorithm classes (unit-tested in isolation). `engine.*` maps the domain to the algorithms. `service.*` handles validation, state and orchestration. `api.*` handles transport only. The frontend never computes allocations; it sends the hub, the vehicles and the options, and renders the JSON result.
+
+**Allocation pipeline (`POST /api/allocate`).**
+1. Validate and normalise → `VehicleRequest` (slots, window, demand, feasibility, notes).
+2. Registry screening: Bloom filter, then exact lookup on hits.
+3. Priority scores, then Quickselect threshold, then tiers.
+4. Tiered max-flow (or the baseline), then min-cut.
+5. Module assignment.
+6. Result DTO: summary, baseline comparison, cut explanation, schedule grid, slot loads, per-vehicle outcomes, warnings.
+
+**API.** Eleven REST endpoints (listed with examples in README §5). Validation failures return 422 with every problem listed; malformed input returns 400; both use one schema `{status, error, details[], timestamp}`.
+
 ```
  Browser (HTML/CSS/JS, no build)                 Spring Boot (Java 17+)
  ┌──────────────────────────────┐   REST/JSON   ┌───────────────────────────────────────────────────────────┐
@@ -44,18 +56,6 @@ The hub uses **dynamic power sharing**: a vehicle stays in its bay for its whole
                                                 │ data/SyntheticData, VehicleCsv · bench/Benchmarks, Cli    │
                                                 └───────────────────────────────────────────────────────────┘
 ```
-
-**Separation of concerns.** `algo.*` holds pure, framework-free algorithm classes (unit-tested in isolation). `engine.*` maps the domain to the algorithms. `service.*` handles validation, state and orchestration. `api.*` handles transport only. The frontend never computes allocations; it sends the hub, the vehicles and the options, and renders the JSON result.
-
-**Allocation pipeline (`POST /api/allocate`).**
-1. Validate and normalise → `VehicleRequest` (slots, window, demand, feasibility, notes).
-2. Registry screening: Bloom filter, then exact lookup on hits.
-3. Priority scores, then Quickselect threshold, then tiers.
-4. Tiered max-flow (or the baseline), then min-cut.
-5. Module assignment.
-6. Result DTO: summary, baseline comparison, cut explanation, schedule grid, slot loads, per-vehicle outcomes, warnings.
-
-**API.** `GET /api/hub/default`, `POST /api/hub/validate`, `POST /api/vehicles/generate`, `POST /api/vehicles/parse` (CSV), `POST /api/allocate`, `GET /api/registry`, `POST /api/registry/generate|load`, `GET /api/registry/check?plate=`, `GET /api/benchmark/{flow|selection|bloom|fpr}`. Errors use one schema `{status, error, details[], timestamp}`: 422 for domain validation (all problems listed), 400 for malformed input.
 
 ## 3. Flow model
 
@@ -140,11 +140,11 @@ For t = 0..T−1: first, each vehicle granted slot t keeps its module from t−1
 
 | Component | Time | Space |
 |---|---|---|
-| Network build | O(n + Σ|W_v| + |C|T) | O(V + E) |
-| Edmonds–Karp | O(VE²) worst case; here also O(E·|f*|), since every path carries ≥ 1 and |f*| ≤ min(ΣD_v, ΣCap) | O(V) extra |
-| Ford–Fulkerson DFS | O(E·|f*|) (capacity-dependent; on general integer capacities it can need |f*| paths) | O(V) |
+| Network build | O(n + Σ\|W_v\| + \|C\|T) | O(V + E) |
+| Edmonds–Karp | O(VE²) worst case; here also O(E·\|f*\|), since every path carries ≥ 1 and \|f*\| ≤ min(ΣD_v, ΣCap) | O(V) extra |
+| Ford–Fulkerson DFS | O(E·\|f*\|) (capacity-dependent; on general integer capacities it can need \|f*\| paths) | O(V) |
 | Min-cut | O(V + E) | O(V) |
-| Greedy baseline | O(n log n + Σ|W_v|) | O(|C|T) |
+| Greedy baseline | O(n log n + Σ\|W_v\|) | O(\|C\|T) |
 | Bloom build / query | O(n(k + L)) / O(k + L), L = key length | m bits = −n ln p/(ln 2)² (9.59 bits/key at 1%) |
 | Randomized Quickselect | expected O(n), worst O(n²) with vanishing probability | O(1) extra (in place on a copy) |
 | Tiering | O(n) expected | O(n) |
@@ -194,7 +194,7 @@ Both always return the same value (tested). On the allocation network every path
 | sorted | 10⁴ | 0.05 ms (3.1·10⁴ cmp) | 0.06 ms | 19.7 ms (3.8·10⁷ cmp) |
 | sorted | 4·10⁴ | **0.32 ms** (2.4·10⁵ cmp) | 0.16 ms | **314 ms** (6.0·10⁸ cmp) |
 
-![random](img/select_random.png) ![sorted](img/select_sorted.png)
+![sorted](img/select_sorted.png)
 
 Randomized Quickselect is **4–5× faster than sorting** at large n, and its comparisons per element stay bounded (≈3–6.5n across 10⁴–4·10⁶). The deterministic first-pivot version is slightly faster on random data (no RNG) but grows **quadratically on sorted input**: 4× more data costs 16× more time. Ranked score lists are often nearly sorted, so randomisation is the right choice. (`Arrays.sort` detects sorted runs, which is why it is fast on sorted input.)
 
@@ -212,24 +212,16 @@ The FPR sweep at n = 10⁵ (targets 10%, 5%, 1%, 0.1%) measured 10.10%, 4.99%, 0
 
 ## 8. Testing
 
-60 JUnit 5 tests (`./mvnw test`, all passing): **MaxFlowTest (18)**, BloomFilterTest (7), QuickselectTest (11), AllocationEngineTest (11), ValidationAndRegistryTest (8), ApiIntegrationTest (5). Every core algorithm has at least 5 correctness tests, including edge or boundary cases:
-
-- **Flow:** sink unreachable, zero/single edge, parallel and anti-parallel arcs, cancellation through reverse arcs, invalid s = t; random property checks for conservation, capacity, EK = FF and |f| = min-cut.
-- **Bloom:** empty filter, null key, sizing formula, FPR within 25% of theory over 200k probes, overfill.
-- **Quickselect:** every k on arrays with duplicates, k = 0 and k = n−1, all-equal arrays (linear work), empty input and NaN, sorted adversary.
-- **Domain:** a hand-checked greedy trap (greedy 1 slot vs max-flow 2), demand > window, missing connector, maintenance, tier preservation, randomized stress invariants.
-- **API:** 422 and 400 paths.
+60 JUnit 5 tests (`./mvnw test`, all passing): MaxFlowTest (18), BloomFilterTest (7), QuickselectTest (11), AllocationEngineTest (11), ValidationAndRegistryTest (8), ApiIntegrationTest (5). Each core algorithm has at least 5 correctness tests with edge cases: an unreachable sink, zero and parallel edges, reverse-arc cancellation and random property checks (conservation, capacity, EK = FF, |f| = min-cut) for flow; an empty filter, the sizing formula and FPR within 25% of theory for Bloom; all k on duplicate-heavy arrays, all-equal input and a sorted adversary for Quickselect; plus a hand-checked greedy trap, tier preservation, randomized schedule invariants and the 422/400 API paths.
 
 **Hand-checked instance** (`sample-data/hub_small.json`): greedy serves 5 slots and fully charges 3 vehicles; Edmonds–Karp serves 7 and fully charges 5, equal to the min-cut of 7 (see README §6).
 
 ## 9. Limitations
 
-1. Optimises slots/energy, not the count of fully charged vehicles (NP-hard; reported, not optimised).
-2. Non-contiguous charging is allowed (the power-sharing model); strict contiguity is NP-hard.
-3. Slot-level energy model: no charging taper, no partial slots, single connector per vehicle.
-4. Single-day, deterministic arrivals: no no-shows or online re-planning (a rolling-horizon re-run is the natural extension, and resuming augmentation already supports adding vehicles incrementally).
-5. Synthetic data: realistic distributions, but not a real operator log. The authoritative registry is in-memory.
-6. Benchmarks ran on a shared 2-vCPU container; wall times are noisy, so work counters are reported alongside.
+1. Optimises slots (energy), not the count of fully charged vehicles, and allows non-contiguous charging; both stricter objectives are NP-hard (§6).
+2. Slot-level energy model: no charging taper or partial slots; one connector per vehicle.
+3. Single-day, deterministic arrivals: no no-shows or online re-planning (resumable augmentation already supports adding vehicles incrementally).
+4. Synthetic data and an in-memory registry; benchmarks ran on a shared 2-vCPU machine, so work counters are reported beside wall times.
 
 ## 10. Individual contribution
 

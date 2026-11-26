@@ -1,55 +1,45 @@
 # Project Proposal: ChargeFlow, an EV Charging Hub Slot Allocator
 
-**Course:** Advanced Algorithms (CIA-3 Real-World Application Project) · Semester V, B.Tech CS (AI & ML) · 2026–27
-**Student:** Daksh Shah · App ID **2405709** · Atlas SkillTech University
-**Team:** individual submission (faculty approval obtained for individual work)
+**Course:** Advanced Algorithms, CIA-3 Real-World Application Project · Semester V, B.Tech CS (AI & ML) · 2026–27\
+**Student:** Daksh Shah · App ID **2405709** · Atlas SkillTech University\
+**Team:** individual submission (faculty approval obtained)
 
 ## 1. Real-world problem
 
-India's public EV charging hubs are congested at commuter peaks. A typical urban hub has a handful of DC-fast (CCS2), AC (Type 2) and legacy Bharat DC-001 modules, and on a busy day far more energy is requested than the modules can deliver. Most hubs today work first-come-first-served: a car that arrives early and stays all day takes a module that several short-stay cars needed. Those cars leave under-charged and the hub delivers less energy (and earns less) than it could. Emergency vehicles and fleet cars with service-level agreements get no protection, and the operator cannot see *which* connector types and hours limit throughput.
+Public EV charging hubs in Indian cities are congested at commuter peaks: on a busy day far more energy is requested than their CCS2, Type 2 AC and Bharat DC-001 modules can deliver. Most hubs run first-come-first-served, so a car that arrives early and stays all day holds a module that several short-stay cars needed. Those cars leave under-charged, the hub delivers less energy than it could, emergency and fleet vehicles get no protection, and the operator cannot see which connector types and hours limit throughput.
 
 ## 2. Target users
 
-- **Hub operator / shift supervisor:** plans the day's module schedule from bookings, re-plans when a module goes into maintenance, and decides where to add capacity.
+- **Hub operator / shift supervisor:** plans the day's module schedule, re-plans around maintenance, decides where to add capacity.
 - **Fleet manager:** needs guaranteed charging for SLA-bound ride-hailing and logistics cars.
-- *(Indirect)* drivers, who get a clear slot plan and the energy they will receive.
 
 ## 3. Proposed features
 
 1. Hub configuration: modules per connector type, power ratings, slot length, opening hours, maintenance windows.
-2. Vehicle input: CSV upload (validated server-side) or a realistic, seeded synthetic peak-day generator.
-3. **Optimal slot allocation** that maximises delivered charging, with a protected **priority tier**.
-4. **Subscriber screening** of every plate against a large registry (subscription holders get priority credit).
-5. Interpretable results: KPIs, per-module schedule (Gantt), capacity heat-map with bottleneck slots, per-vehicle outcomes, warnings.
-6. Side-by-side comparison with a greedy FCFS baseline, plus a live benchmark page.
+2. Vehicle input by validated CSV upload or a seeded synthetic peak-day generator.
+3. **Optimal slot allocation** maximising delivered charging, with a protected **priority tier**.
+4. **Subscriber screening** of every plate against a large registry.
+5. Interpretable results: KPIs, per-module schedule, bottleneck heat-map, per-vehicle outcomes, and a side-by-side comparison with a greedy baseline.
 
 ## 4. Core techniques and why they fit
 
-| Technique | Syllabus | Why it is appropriate |
+| Technique | Unit | Why it is appropriate |
 |---|---|---|
-| **Edmonds–Karp max-flow + min-cut** | Unit 5 (CO4) | Charging is a capacitated assignment: vehicles → (connector, slot) pairs → modules. An integral maximum flow is exactly a feasible schedule that maximises delivered slots (integrality theorem). The min-cut certifies optimality and names the binding slots. BFS augmenting paths give a capacity-independent O(VE²) bound. Adding source arcs tier by tier and resuming the solver gives priority protection without a separate algorithm. |
-| **Bloom filter** | Unit 6 (CO5) | The subscriber registry is large (50,000+ plates) and in production would live in a remote database. A ~60 KB Bloom filter answers "definitely not a subscriber" for most plates and skips the database. Every "possibly present" hit is confirmed by an exact lookup, so false positives never grant benefits. |
-| **Randomized Quickselect** | Unit 6 (CO5) | The priority tier is the top-k priority scores. Selecting the k-th largest takes expected O(n) instead of O(n log n) sorting, and a random pivot avoids the quadratic worst case on already-ranked (sorted) score lists. Also used for p50/p90 dashboard statistics. |
+| **Edmonds–Karp max-flow + min-cut** | 5 (CO4) | Charging is a capacitated assignment of vehicles to (connector, slot) pairs. An integral maximum flow is exactly an optimal feasible schedule; the min-cut certifies it and names the binding slots. Adding source arcs tier by tier protects the priority tier. |
+| **Bloom filter** | 6 (CO5) | A ~60 KB filter answers "definitely not a subscriber" for most plates without touching the 50,000-plate registry; every "possibly present" hit is confirmed by an exact lookup. |
+| **Randomized Quickselect** | 6 (CO5) | The priority tier is the top-k scores: expected O(n) selection instead of sorting, and a random pivot avoids the quadratic case on already-ranked lists. |
 
-**Baselines:** greedy FCFS allocation, Ford–Fulkerson with DFS, first-pivot Quickselect, sort-then-index, in-memory HashSet.
+**Baselines:** greedy FCFS, DFS Ford–Fulkerson, first-pivot Quickselect, sort-then-index, HashSet.
 
-## 5. Data source
+## 5. Data and technology
 
-- Seeded synthetic data modelled on Indian conditions: valid registration plates (state/RTO/series format), a bimodal commuter arrival profile with a midday fleet plateau, lognormal dwell times, and the Indian EV mix (Tata Nexon/Punch/Tiago/Tigor, MG ZS/Comet, Mahindra XUV400, …) with real battery capacities and charge-rate limits.
-- A 50,000-plate synthetic subscriber registry.
-- Hand-built small instances with known optimal answers, and an invalid-data file for validation testing.
-- User-supplied CSVs in a documented format.
+Seeded synthetic data modelled on Indian conditions (valid registration plates, bimodal commuter arrivals, real EV models with their battery sizes and charge limits), a 50,000-plate registry, hand-checkable instances and an invalid-data file. Java 17+ with a Spring Boot REST API (all algorithms hand-written), a plain JavaScript frontend, JUnit 5 tests and a reproducible benchmark CLI.
 
-## 6. Technology
+## 6. Measurable success criteria
 
-Java 17+ with Spring Boot REST API (all algorithms hand-written), plain HTML/CSS/JavaScript frontend served by the backend, JUnit 5 tests, and a reproducible benchmark CLI. No database is required.
-
-## 7. Measurable success criteria
-
-1. **Optimality:** allocated slots equal the min-cut capacity on every run, and Edmonds–Karp equals Ford–Fulkerson on all test networks.
-2. **Benefit over baseline:** at least 5% more charging slots than greedy FCFS on congested peak-day data, across at least three increasing sizes.
-3. **Priority guarantee:** tier-1 service after all tiers equals tier-1 service when solved alone (asserted in tests).
-4. **Bloom correctness:** zero false negatives; empirical FPR within 25% of the theoretical rate; 100% of hits verified.
-5. **Selection efficiency:** randomized Quickselect faster than sorting at n ≥ 10⁶, and near-linear on sorted input where a first-pivot Quickselect is quadratic.
-6. **Robustness:** every invalid input in the validation sample is rejected with a specific message; at least 5 correctness tests per core algorithm, including edge cases.
-7. **Responsiveness:** a 220-vehicle day is allocated in under 50 ms on a laptop.
+1. Allocated slots equal the min-cut capacity on every run; Edmonds–Karp equals Ford–Fulkerson on all test networks.
+2. At least 5% more charging slots than greedy FCFS on congested days, at three or more sizes.
+3. Tier-1 service after all tiers equals its service when solved alone.
+4. Bloom filter: zero false negatives, empirical FPR within 25% of theory, every hit verified.
+5. Quickselect faster than sorting at n ≥ 10⁶ and near-linear on sorted input.
+6. Every invalid input is rejected with a specific message; at least 5 tests per core algorithm.

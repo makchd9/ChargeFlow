@@ -35,6 +35,8 @@ macOS: `brew install openjdk@21` (or install Temurin 21 from adoptium.net). No d
 
 ## 2. Build, test, run
 
+**Quickest (macOS / Linux):** `./run.sh` checks for Java 17+, starts the server and opens http://localhost:8080.
+
 ```bash
 cd ChargeFlow
 ./mvnw test                 # 60 JUnit tests (algorithms, engine, validation, REST API)
@@ -183,4 +185,4 @@ sample-data/  benchmarks/  docs/
 * Single-day horizon, deterministic arrivals (no no-shows or stochastic arrivals), no charging taper.
 * The authoritative registry is an in-memory HashSet standing in for an operator database.
 
-Documentation: `docs/PROPOSAL.md` (deliverable A) and `docs/REPORT.md` (deliverable C).
+Documentation: proposal (deliverable A) and technical report (deliverable C) as `docs/ChargeFlow_Proposal_2405709.pdf` / `.docx` and `docs/ChargeFlow_Technical_Report_2405709.pdf` / `.docx`; markdown sources in `docs/PROPOSAL.md` and `docs/REPORT.md` (rebuild with `docs/build_docs.sh`).
