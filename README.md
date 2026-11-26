@@ -185,4 +185,4 @@ sample-data/  benchmarks/  docs/
 * Single-day horizon, deterministic arrivals (no no-shows or stochastic arrivals), no charging taper.
 * The authoritative registry is an in-memory HashSet standing in for an operator database.
 
-Documentation: proposal (deliverable A) and technical report (deliverable C) as `docs/ChargeFlow_Proposal_2405709.pdf` / `.docx` and `docs/ChargeFlow_Technical_Report_2405709.pdf` / `.docx`; markdown sources in `docs/PROPOSAL.md` and `docs/REPORT.md` (rebuild with `docs/build_docs.sh`).
+Documentation: demonstration evidence (deliverable D) in `docs/ChargeFlow_Demo_Evidence_2405709.pdf`; proposal (deliverable A) and technical report (deliverable C) as `docs/ChargeFlow_Proposal_2405709.pdf` / `.docx` and `docs/ChargeFlow_Technical_Report_2405709.pdf` / `.docx`; markdown sources in `docs/PROPOSAL.md` and `docs/REPORT.md` (rebuild with `docs/build_docs.sh`).
