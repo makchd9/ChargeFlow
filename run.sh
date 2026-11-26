@@ -19,6 +19,15 @@ if [ "${major:-0}" -lt 17 ]; then
   exit 1
 fi
 
-echo "Starting ChargeFlow (Java $major). Open http://localhost:8080  (Ctrl+C to stop)"
-( sleep 12; command -v open >/dev/null && open http://localhost:8080 ) >/dev/null 2>&1 &
+echo "Starting ChargeFlow (Java $major). The first run downloads Maven + libraries (1-2 min)."
+echo "The browser opens automatically once the server is ready. Ctrl+C to stop."
+# open the browser only when the server actually answers (waits up to 5 minutes)
+( for i in $(seq 1 150); do
+    if curl -s -o /dev/null http://localhost:8080/api/health; then
+      echo ">>> ChargeFlow is ready: http://localhost:8080"
+      command -v open >/dev/null && open http://localhost:8080
+      exit 0
+    fi
+    sleep 2
+  done ) &
 exec ./mvnw -q spring-boot:run
