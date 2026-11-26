@@ -49,19 +49,19 @@ Median of 5 timed runs after 2 warm-ups. `work` = arc scans (flow), comparisons 
 | selection (sorted input) | Randomized Quickselect | 40,000 | 0.317 | 235,593 | 1 | k=n/2 |
 | selection (sorted input) | Sort then index (baseline) | 40,000 | 0.155 | 611,508 | 1 | Arrays.sort dual-pivot quicksort |
 | selection (sorted input) | First-pivot Quickselect (baseline) | 40,000 | 314.311 | 600,009,999 | 1 | deterministic pivot |
-| bloom | Bloom build | 10,000 | 2.283 | 95,851 | 7 | m bits / k hashes |
-| bloom | Bloom query (absent keys) | 10,000 | 12.225 | 100,000 | 0.01045 | empirical FPR=0.01045 theoretical=0.01004 falseNegatives=0 |
-| bloom | HashSet query (baseline) | 10,000 | 2.506 | 100,000 | 0 | exact, 0 false positives |
+| bloom | Bloom build | 10,000 | 1.882 | 95,851 | 7 | m bits / k hashes |
+| bloom | Bloom query (absent keys) | 10,000 | 6.389 | 100,000 | 0.01045 | empirical FPR=0.01045 theoretical=0.01004 falseNegatives=0 |
+| bloom | HashSet query (baseline) | 10,000 | 4.805 | 100,000 | 0 | exact, 0 false positives |
 | bloom | Memory Bloom (bytes) | 10,000 | 0.000 | 11,984 | 0 |  |
 | bloom | Memory HashSet est. (bytes) | 10,000 | 0.000 | 960,000 | 0 | ~96 B per 10-char plate entry |
-| bloom | Bloom build | 100,000 | 10.951 | 958,506 | 7 | m bits / k hashes |
-| bloom | Bloom query (absent keys) | 100,000 | 6.532 | 100,000 | 0.01028 | empirical FPR=0.01028 theoretical=0.01004 falseNegatives=0 |
-| bloom | HashSet query (baseline) | 100,000 | 1.931 | 100,000 | 0 | exact, 0 false positives |
+| bloom | Bloom build | 100,000 | 12.744 | 958,506 | 7 | m bits / k hashes |
+| bloom | Bloom query (absent keys) | 100,000 | 11.380 | 100,000 | 0.01028 | empirical FPR=0.01028 theoretical=0.01004 falseNegatives=0 |
+| bloom | HashSet query (baseline) | 100,000 | 3.950 | 100,000 | 0 | exact, 0 false positives |
 | bloom | Memory Bloom (bytes) | 100,000 | 0.000 | 119,816 | 0 |  |
 | bloom | Memory HashSet est. (bytes) | 100,000 | 0.000 | 9,600,000 | 0 | ~96 B per 10-char plate entry |
-| bloom | Bloom build | 1,000,000 | 100.007 | 9,585,059 | 7 | m bits / k hashes |
-| bloom | Bloom query (absent keys) | 1,000,000 | 14.711 | 100,000 | 0.00969 | empirical FPR=0.00969 theoretical=0.01004 falseNegatives=0 |
-| bloom | HashSet query (baseline) | 1,000,000 | 3.380 | 100,000 | 0 | exact, 0 false positives |
+| bloom | Bloom build | 1,000,000 | 98.789 | 9,585,059 | 7 | m bits / k hashes |
+| bloom | Bloom query (absent keys) | 1,000,000 | 22.319 | 100,000 | 0.00969 | empirical FPR=0.00969 theoretical=0.01004 falseNegatives=0 |
+| bloom | HashSet query (baseline) | 1,000,000 | 5.980 | 100,000 | 0 | exact, 0 false positives |
 | bloom | Memory Bloom (bytes) | 1,000,000 | 0.000 | 1,198,136 | 0 |  |
 | bloom | Memory HashSet est. (bytes) | 1,000,000 | 0.000 | 96,000,000 | 0 | ~96 B per 10-char plate entry |
 | bloom-fpr | target 0.1 | 100,000 | 0.000 | 0 | 0.10101 | m=479253 k=3 bits/key=4.79 |

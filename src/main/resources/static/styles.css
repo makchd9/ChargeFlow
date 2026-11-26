@@ -129,5 +129,8 @@ svg text { font-family: var(--sans); }
 .prose { max-width: 900px; } .prose p, .prose li { color: #2b3833; } .prose h2 { margin: 16px 0 6px; }
 .bench-block { margin-top: 16px; }
 .bench-block h3 { margin-bottom: 6px; }
-.bench-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 12px; }
+.bench-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.bench-charts svg { max-width: 620px; display: block; }
+@media (max-width: 1000px) { .bench-charts { grid-template-columns: 1fr; } }
+#fprChart svg { max-width: 620px; }
 footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px; }

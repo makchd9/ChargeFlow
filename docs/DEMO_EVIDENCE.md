@@ -7,11 +7,11 @@ This document collects the four kinds of evidence deliverable D asks for: the wo
 
 ## 1. Working application (local)
 
-The application runs locally with one command, `bash run.sh` (or `./mvnw spring-boot:run`), and serves the UI at `http://localhost:8080`. The screenshots below were taken on the student's MacBook (Safari with a dark-mode extension active; browser toolbar cropped) during final testing on 26 Nov 2026. A few labels were refined after these were taken (for example, readable table headers and an explicit bottleneck line in the min-cut panel); the current screens appear in §2–3.
+The application runs locally with one command, `bash run.sh` (or `./mvnw spring-boot:run`), and serves the UI at `http://localhost:8080`. The screenshots below were taken on the student's MacBook (Safari with a dark-mode extension active; browser toolbar cropped) on 26 Nov 2026, running the final build.
 
 ![ChargeFlow running locally on macOS: Plan tab with the default hub and 220 generated vehicles](img/evidence/mac_plan.jpg)
 
-![Results tab on macOS: 325 slots delivered vs 312 for greedy, min-cut certificate, capacity heat-map](img/evidence/mac_results.jpg)
+![Results tab on macOS: 325 slots delivered vs 312 for greedy, min-cut certificate naming the bottleneck connector, capacity heat-map](img/evidence/mac_results.jpg)
 
 The same build passes all 64 JUnit tests (`./mvnw test`) on the developer machine and on a clean clone.
 
@@ -143,6 +143,6 @@ Zero false negatives were observed in every run.
 
 ### 4.5 Live benchmarks inside the app
 
-The Benchmarks tab runs the same experiments on demand on the server and charts them.
+The Benchmarks tab runs the same experiments on demand on the server and charts them (screenshot from the student's MacBook).
 
-![Benchmarks tab: max-flow vs greedy, time vs n](img/evidence/bench_flow.png)
+![Benchmarks tab on macOS: randomized Quickselect vs sorting vs first-pivot Quickselect](img/evidence/mac_bench.jpg)

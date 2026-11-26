@@ -160,34 +160,26 @@ public final class Benchmarks {
      */
     public static List<Row> bloom(int[] sizes, double fpr, int probes) {
         List<Row> rows = new ArrayList<>();
+        warmUpBloom(fpr);
         for (int n : sizes) {
             List<String> reg = SyntheticData.plates(n, new Random(n), Set.of());
             Set<String> regSet = new HashSet<>(reg);
             List<String> absent = SyntheticData.plates(probes, new Random(n + 99), regSet);
 
+            // 2 untimed warm-up passes, then 5 timed passes (median reported), same as the other experiments
             BloomFilter bf = null;
-            double[] build = new double[3];
-            for (int r = 0; r < 3; r++) {
+            double[] build = new double[5], query = new double[5], hq = new double[5];
+            int fp = 0, hits = 0;
+            for (int r = -2; r < 5; r++) {
                 long t = System.nanoTime();
-                bf = BloomFilter.optimal(n, fpr);
-                for (String p : reg) bf.add(p);
-                build[r] = (System.nanoTime() - t) / 1e6;
-            }
-            double[] query = new double[3];
-            int fp = 0;
-            for (int r = 0; r < 3; r++) {
-                fp = 0;
-                long t = System.nanoTime();
-                for (String p : absent) if (bf.mightContain(p)) fp++;
-                query[r] = (System.nanoTime() - t) / 1e6;
-            }
-            double[] hq = new double[3];
-            int hits = 0;
-            for (int r = 0; r < 3; r++) {
-                hits = 0;
-                long t = System.nanoTime();
-                for (String p : absent) if (regSet.contains(p)) hits++;
-                hq[r] = (System.nanoTime() - t) / 1e6;
+                bf = buildFilter(reg, n, fpr);
+                if (r >= 0) build[r] = (System.nanoTime() - t) / 1e6;
+                t = System.nanoTime();
+                fp = countBloomHits(bf, absent);
+                if (r >= 0) query[r] = (System.nanoTime() - t) / 1e6;
+                t = System.nanoTime();
+                hits = countSetHits(regSet, absent);
+                if (r >= 0) hq[r] = (System.nanoTime() - t) / 1e6;
             }
             boolean noFalseNeg = true;
             for (String p : reg) if (!bf.mightContain(p)) { noFalseNeg = false; break; }
@@ -217,6 +209,38 @@ public final class Benchmarks {
                     (double) fp / probes, "m=" + bf.bitCount() + " k=" + bf.hashCount() + " bits/key=" + String.format(Locale.ROOT, "%.2f", (double) bf.bitCount() / n)));
         }
         return rows;
+    }
+
+    // Timed bodies live in small methods so the JIT compiles them once and every size is measured on compiled code.
+    private static BloomFilter buildFilter(List<String> keys, int n, double fpr) {
+        BloomFilter bf = BloomFilter.optimal(n, fpr);
+        for (String k : keys) bf.add(k);
+        return bf;
+    }
+
+    private static int countBloomHits(BloomFilter bf, List<String> probes) {
+        int c = 0;
+        for (String p : probes) if (bf.mightContain(p)) c++;
+        return c;
+    }
+
+    private static int countSetHits(Set<String> set, List<String> probes) {
+        int c = 0;
+        for (String p : probes) if (set.contains(p)) c++;
+        return c;
+    }
+
+    private static volatile int sink;
+
+    /** Untimed run so that the first measured size is not paying for JIT compilation. */
+    private static void warmUpBloom(double fpr) {
+        List<String> keys = SyntheticData.plates(50_000, new Random(1), Set.of());
+        Set<String> set = new HashSet<>(keys);
+        List<String> probes = SyntheticData.plates(50_000, new Random(2), set);
+        for (int i = 0; i < 8; i++) {
+            BloomFilter bf = buildFilter(keys, keys.size(), fpr);
+            sink += countBloomHits(bf, probes) + countSetHits(set, probes);
+        }
     }
 
     static double median(double[] a) {

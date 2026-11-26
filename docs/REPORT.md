@@ -208,7 +208,7 @@ Randomized Quickselect is **4.2–5.3× faster than sorting** at n ≥ 10⁶, an
 
 ![fpr](img/bloom_fpr.png)
 
-The FPR sweep at n = 10⁵ (targets 10%, 5%, 1%, 0.1%) measured 10.10%, 4.99%, 0.99% and 0.109%, with **zero false negatives** in every run. The filter is about **80× smaller** than a HashSet. In-process, a HashSet query is ~3–5× faster (one hash vs k probes), so the Bloom filter is *not* a speed-up over local memory. Its value is that the exact store sits behind a network or disk. In the demo it avoided 141 of 220 exact lookups (64%), and the 2 false positives it produced were caught by verification and **not** credited as subscriptions.
+The FPR sweep at n = 10⁵ (targets 10%, 5%, 1%, 0.1%) measured 10.10%, 4.99%, 0.99% and 0.109%, with **zero false negatives** in every run. The filter is about **80× smaller** than a HashSet. In-process, a HashSet query is 1.3–3.7× faster (one hash against k = 7 probes, which miss the CPU cache once the bit array outgrows it), so the Bloom filter is *not* a speed-up over local memory. Its value is that the exact store sits behind a network or disk. In the demo it avoided 141 of 220 exact lookups (64%), and the 2 false positives it produced were caught by verification and **not** credited as subscriptions.
 
 ## 8. Testing
 
