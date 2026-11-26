@@ -232,12 +232,15 @@ public final class Benchmarks {
 
     private static volatile int sink;
 
-    /** Untimed run so that the first measured size is not paying for JIT compilation. */
+    /** Untimed run so that the first measured size pays neither for JIT compilation nor for CPU frequency ramp-up. */
     private static void warmUpBloom(double fpr) {
         List<String> keys = SyntheticData.plates(50_000, new Random(1), Set.of());
         Set<String> set = new HashSet<>(keys);
         List<String> probes = SyntheticData.plates(50_000, new Random(2), set);
-        for (int i = 0; i < 8; i++) {
+        // at least 8 passes and at least ~400 ms, so the JIT has compiled the code and the CPU has left its
+        // low-power state (Apple Silicon starts short bursts on efficiency cores) before anything is timed
+        long until = System.nanoTime() + 400_000_000L;
+        for (int i = 0; i < 8 || System.nanoTime() < until; i++) {
             BloomFilter bf = buildFilter(keys, keys.size(), fpr);
             sink += countBloomHits(bf, probes) + countSetHits(set, probes);
         }
