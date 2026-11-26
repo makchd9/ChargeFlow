@@ -100,4 +100,20 @@ class ValidationAndRegistryTest {
         assertThrows(ValidationException.class, () -> reg.rebuild(List.of("NOTAPLATE"), 0.01));
         assertThrows(ValidationException.class, () -> reg.rebuild(List.of("MH12AB1234"), 0.9));
     }
+
+    @Test
+    @DisplayName("edge: a tiny positive energy request still needs one slot (never 'FULL' with zero slots)")
+    void tinyEnergyNeedsOneSlot() {
+        Vehicle tiny = new Vehicle("MH12AB1236", "x", ConnectorType.CCS2, "09:00", "11:00", 1e-12, 30, null, VehicleCategory.PRIVATE);
+        assertEquals(1, vs.validate(hub, List.of(tiny), null).requests().get(0).slotsNeeded());
+    }
+
+    @Test
+    @DisplayName("maxChargeKw between 0 and 1 kW is rejected; 0 or blank means 'use the charger rating'")
+    void maxChargeFloor() {
+        Vehicle bad = new Vehicle("MH12AB1237", "x", ConnectorType.CCS2, "09:00", "11:00", 20, 30, 0.0001, VehicleCategory.PRIVATE);
+        assertThrows(ValidationException.class, () -> vs.validate(hub, List.of(bad), null));
+        Vehicle zero = new Vehicle("MH12AB1238", "x", ConnectorType.CCS2, "09:00", "11:00", 20, 30, 0.0, VehicleCategory.PRIVATE);
+        assertEquals(60.0, vs.validate(hub, List.of(zero), null).requests().get(0).effectiveKw());
+    }
 }

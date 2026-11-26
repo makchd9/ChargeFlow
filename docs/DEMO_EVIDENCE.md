@@ -13,7 +13,7 @@ The application runs locally with one command, `bash run.sh` (or `./mvnw spring-
 
 ![Results tab on macOS: 325 slots delivered vs 312 for greedy, min-cut certificate, capacity heat-map](img/evidence/mac_results.jpg)
 
-The same build passes all 60 JUnit tests (`./mvnw test`) on the developer machine and on a clean clone.
+The same build passes all 64 JUnit tests (`./mvnw test`) on the developer machine and on a clean clone.
 
 ## 2. Example inputs and outputs
 
@@ -31,7 +31,7 @@ The same build passes all 60 JUnit tests (`./mvnw test`) on the developer machin
 | Priority-tier slots served (of 76) | 72 | 72 |
 | Allocation time | ~4 ms | <1 ms |
 
-Max-flow = min-cut = 325, so no feasible schedule can deliver more with this capacity. The Bloom filter screened 220 plates: 141 definitely absent (no database lookup), 77 verified subscribers, 2 false positives caught by the exact lookup.
+Max-flow = min-cut = 325, so no feasible schedule can deliver more with this capacity. The min-cut also locates the bottleneck: all CCS2 demand is met (137/137 slots), while Type 2 AC (138/198) and Bharat DC-001 (50/63) are capacity-bound; adding two AC modules raises the optimum to 353. The Bloom filter screened 220 plates: 141 definitely absent (no database lookup), 77 verified subscribers, 2 false positives caught by the exact lookup.
 
 ### 2.2 Hand-checkable instance: where greedy fails
 
@@ -92,7 +92,9 @@ Invalid input is never silently accepted. Every response below is real output fr
                          "line 3: energy_kwh 'abc' is not a number"]}
 ```
 
-**3.6 Partly infeasible input:** with the Bharat DC-001 module count set to 0, those vehicles are kept, marked INFEASIBLE with a reason, and listed in the warnings; the rest are still allocated optimally.
+**3.6 Wrong path, method or content type:** framework errors keep their own status codes (404 unknown path, 405 wrong method, 415 wrong content type, 400 missing parameter) with the same JSON error schema, never a generic 500.
+
+**3.7 Partly infeasible input:** with the Bharat DC-001 module count set to 0, those vehicles are kept, marked INFEASIBLE with a reason, and listed in the warnings; the rest are still allocated optimally.
 
 ![Vehicles with no compatible connector marked INFEASIBLE](img/evidence/err_infeasible.png)
 

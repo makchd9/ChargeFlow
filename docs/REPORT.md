@@ -94,7 +94,7 @@ EDMONDS-KARP-AUGMENT(G, s, t):
 **Priority guarantee.** An augmenting path is a simple s–t path, so it uses exactly one arc leaving s, as a forward arc, and never a reverse arc into s. Augmentations in later phases therefore never reduce flow on earlier source arcs. When phase k ends there is no augmenting path, so the flow restricted to tiers 1..k is maximum for the network with only those source arcs. Tier 1 gets its standalone optimum, and the final flow is still a global maximum for all tiers, because the last phase runs Edmonds–Karp to completion on the full network. Asserted in tests via `tierServedAfterOwnPhase[0] == tierServed[0]`.
 
 ### 4.3 Min-cut (`MinCut`)
-BFS from s in the final residual network gives S. The cut arcs are forward arcs with u ∈ S and v ∉ S. In ChargeFlow terms the cut splits into (a) source arcs of fully served vehicles and (b) saturated (connector, slot) sink arcs, the **binding capacity** that the heat-map outlines.
+BFS from s in the final residual network gives S. The cut arcs are forward arcs with u ∈ S and v ∉ S. In ChargeFlow terms the cut splits into (a) source arcs of fully served vehicles and (b) saturated (connector, slot) sink arcs, the **binding capacity** that the heat-map outlines. The app turns this into advice per connector type: on the demo day all CCS2 demand is met, while Type 2 AC (18 binding slots) and Bharat DC-001 (6) limit throughput, and adding two AC modules raises the optimum from 325 to 353 slots.
 
 ### 4.4 Bloom filter (`BloomFilter`, `RegistryService`)
 ```
@@ -212,7 +212,7 @@ The FPR sweep at n = 10⁵ (targets 10%, 5%, 1%, 0.1%) measured 10.10%, 4.99%, 0
 
 ## 8. Testing
 
-60 JUnit 5 tests (`./mvnw test`, all passing): MaxFlowTest (18), BloomFilterTest (7), QuickselectTest (11), AllocationEngineTest (11), ValidationAndRegistryTest (8), ApiIntegrationTest (5). Each core algorithm has at least 5 correctness tests with edge cases: an unreachable sink, zero and parallel edges, reverse-arc cancellation and random property checks (conservation, capacity, EK = FF, |f| = min-cut) for flow; an empty filter, the sizing formula and FPR within 25% of theory for Bloom; all k on duplicate-heavy arrays, all-equal input and a sorted adversary for Quickselect; plus a hand-checked greedy trap, tier preservation, randomized schedule invariants and the 422/400 API paths.
+64 JUnit 5 tests (`./mvnw test`, all passing; full list in `docs/TEST_CASES.md`): MaxFlowTest (18), BloomFilterTest (7), QuickselectTest (11), AllocationEngineTest (11), ValidationAndRegistryTest (10), ApiIntegrationTest (7). Each core algorithm has at least 5 correctness tests with edge cases: an unreachable sink, zero and parallel edges, reverse-arc cancellation and random property checks (conservation, capacity, EK = FF, |f| = min-cut) for flow; an empty filter, the sizing formula and FPR within 25% of theory for Bloom; all k on duplicate-heavy arrays, all-equal input and a sorted adversary for Quickselect; plus a hand-checked greedy trap, tier preservation, randomized schedule invariants and the 400/404/405/415/422 API paths.
 
 **Hand-checked instance** (`sample-data/hub_small.json`): greedy serves 5 slots and fully charges 3 vehicles; Edmonds–Karp serves 7 and fully charges 5, equal to the min-cut of 7 (see README §6).
 

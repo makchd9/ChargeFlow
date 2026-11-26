@@ -39,7 +39,7 @@ macOS: `brew install openjdk@21` (or install Temurin 21 from adoptium.net). No d
 
 ```bash
 cd ChargeFlow
-./mvnw test                 # 60 JUnit tests (algorithms, engine, validation, REST API)
+./mvnw test                 # 64 JUnit tests (algorithms, engine, validation, REST API)
 ./mvnw spring-boot:run      # starts the backend and frontend on http://localhost:8080
 ```
 Windows: use `mvnw.cmd` in place of `./mvnw`. To use another port: `PORT=9090 ./mvnw spring-boot:run`.
@@ -61,7 +61,7 @@ python3 docs/make_charts.py                 # optional: regenerate docs/img/*.pn
 
 1. **Plan tab:** the default hub (Baner EV Hub, Pune: 6× CCS2 60 kW, 5× Type 2 AC 7.4 kW, 3× Bharat DC-001 15 kW, 06:00–22:00, CCS2-03 under maintenance 12:00–14:00) and a synthetic 220-vehicle day are loaded on start-up. Edit module counts, power ratings, maintenance windows or slot length, or upload your own CSV.
 2. Pick the **algorithm** (Edmonds–Karp, Ford–Fulkerson DFS, or the Greedy baseline), the **priority tier size** (0–60%) and the Quickselect seed, then press **Run allocation**.
-3. **Results tab:** KPIs, max-flow vs greedy bars, the min-cut explanation, a capacity heat-map (binding cells outlined), a per-module schedule (Gantt) and a filterable per-vehicle table with registry status, tier, score, sessions and module switches.
+3. **Results tab:** KPIs, max-flow vs greedy bars, the min-cut explanation (including which connector type is the bottleneck), a capacity heat-map (binding cells outlined), a per-module schedule (Gantt) and a filterable per-vehicle table with registry status, tier, score, sessions and module switches.
 4. **Registry tab:** Bloom filter parameters (n, m, k, memory, theoretical FPR), a live plate check that shows the Bloom answer and the exact answer separately, a rebuild option with a different target FPR, and an empirical-vs-theoretical FPR experiment.
 5. **Benchmarks tab:** quick live benchmarks with log–log charts.
 6. Edge cases for the viva: *Load sample → Invalid rows* then **Run** (6 problems reported, nothing computed); *Load sample → Hand-check* with Priority tier at **0%**: Greedy gives 5 slots, Edmonds–Karp gives 7 (see §6); set every module count of a type to 0 (its vehicles become INFEASIBLE with a warning); set all counts to 0 (rejected as an infeasible network).
@@ -164,11 +164,13 @@ src/main/java/com/chargeflow/
   data/           SyntheticData, VehicleCsv
   bench/          Benchmarks, BenchmarkCli
 src/main/resources/static/   index.html, app.js, styles.css (frontend), samples/
-src/test/java/...            60 JUnit tests
+src/test/java/...            64 JUnit tests (catalogue: docs/TEST_CASES.md)
 sample-data/  benchmarks/  docs/
 ```
 
 ## 9. Tests (`./mvnw test`)
+
+Every test, with what it checks and its result, is listed in [`docs/TEST_CASES.md`](docs/TEST_CASES.md). A line-by-line map of the CIA-3 guidelines to this project is in [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md).
 
 | suite | tests | covers |
 |---|---|---|
@@ -176,13 +178,27 @@ sample-data/  benchmarks/  docs/
 | `BloomFilterTest` | 7 | no false negatives, empty filter, sizing formula, empirical FPR within 25% of theory, invalid params, duplicate inserts, overfill |
 | `QuickselectTest` | 11 | all k vs sort (5 seeds), k = 0 / n−1 / single element, all-equal input, invalid input, sorted adversary, non-destructive percentile, expected-linear work |
 | `AllocationEngineTest` | 11 | greedy trap (hand-checked), demand > window, infeasible connector, maintenance, tier preservation, 5 random stress invariants, exact-k tiering |
-| `ValidationAndRegistryTest` | 8 | empty, duplicates, multi-error report, no chargers, outside hours, CSV parsing, Bloom hits always verified, registry validation |
-| `ApiIntegrationTest` | 5 | generate→allocate over HTTP, 422 on empty, 400 on bad JSON, registry check, CSV errors |
+| `ValidationAndRegistryTest` | 10 | empty, duplicates, multi-error report, no chargers, outside hours, CSV parsing, Bloom hits always verified, registry validation, tiny-energy and max-kW edge cases |
+| `ApiIntegrationTest` | 7 | generate→allocate over HTTP, 422 on empty, 400 on bad JSON, 404/405/415/400 framework errors, registry check, CSV errors, bottleneck explanation |
 
-## 10. Limitations
+## 10. Screenshots
+
+| Plan (input) | Validation errors | Registry |
+|---|---|---|
+| ![plan](docs/img/screenshot_plan.png) | ![validation](docs/img/screenshot_validation.png) | ![registry](docs/img/screenshot_registry.png) |
+
+More, including the app running on macOS, the hand-check example and every error case: [`docs/ChargeFlow_Demo_Evidence_2405709.pdf`](docs/ChargeFlow_Demo_Evidence_2405709.pdf).
+
+## 11. Limitations
 * Max-flow maximises **slots (energy)**, not the **number of fully charged vehicles**. That objective is a knapsack-like NP-hard problem; it is reported, never claimed as optimised.
 * Requiring contiguous charging sessions makes scheduling NP-hard; the power-sharing model avoids this, and the module assigner keeps sessions contiguous where it can.
 * Single-day horizon, deterministic arrivals (no no-shows or stochastic arrivals), no charging taper.
 * The authoritative registry is an in-memory HashSet standing in for an operator database.
+
+## 12. Data attribution and contribution
+
+* **Data:** all vehicle, plate and registry data is synthetic and generated by `SyntheticData` with fixed seeds; EV battery sizes and charge limits are approximate public manufacturer figures. No third-party dataset is used.
+* **Libraries:** Spring Boot (HTTP/JSON only) and JUnit 5. Every assessed algorithm is the author's own Java code in `com.chargeflow.algo`.
+* **Contribution:** individual project (faculty-approved), Daksh Shah (2405709): design, implementation, tests, benchmarks and documentation. See report §10.
 
 Documentation: demonstration evidence (deliverable D) in `docs/ChargeFlow_Demo_Evidence_2405709.pdf`; proposal (deliverable A) and technical report (deliverable C) as `docs/ChargeFlow_Proposal_2405709.pdf` / `.docx` and `docs/ChargeFlow_Technical_Report_2405709.pdf` / `.docx`; markdown sources in `docs/PROPOSAL.md` and `docs/REPORT.md` (rebuild with `docs/build_docs.sh`).

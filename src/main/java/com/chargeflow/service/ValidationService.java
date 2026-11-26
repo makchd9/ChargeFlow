@@ -116,7 +116,8 @@ public class ValidationService {
             if (v.connector() == null) errs.add(row + ": connector is required");
             if (!(v.energyKwh() > 0 && v.energyKwh() <= 200)) errs.add(row + ": energyKwh must be in (0, 200]");
             if (!(v.batteryPct() >= 0 && v.batteryPct() <= 100)) errs.add(row + ": batteryPct must be in [0, 100]");
-            if (v.maxChargeKw() != null && v.maxChargeKw() < 0) errs.add(row + ": maxChargeKw cannot be negative");
+            if (v.maxChargeKw() != null && (v.maxChargeKw() < 0 || (v.maxChargeKw() > 0 && v.maxChargeKw() < 1)))
+                errs.add(row + ": maxChargeKw must be at least 1 kW (leave it blank or 0 to use the charger rating)");
 
             Integer arr = minutes(v.arrival()), dep = minutes(v.departure());
             if (arr == null) errs.add(row + ": arrival must be HH:mm");
@@ -135,7 +136,8 @@ public class ValidationService {
             int dSlot = Math.floorDiv(d - open, hub.slotMinutes());
             double rated = hub.power(v.connector());
             double eff = (v.maxChargeKw() == null || v.maxChargeKw() == 0) ? rated : Math.min(rated, v.maxChargeKw());
-            int need = (int) Math.ceil(v.energyKwh() / (eff * hub.slotHours()) - 1e-9);
+            // every positive request needs at least one slot (guards against rounding a tiny request down to 0)
+            int need = Math.max(1, (int) Math.ceil(v.energyKwh() / (eff * hub.slotHours()) - 1e-9));
 
             boolean feasible = true;
             String note = null;
@@ -156,7 +158,7 @@ public class ValidationService {
         }
 
         if (!errs.isEmpty()) {
-            throw new ValidationException(errs.size() + " problem(s) in vehicle data", errs.size() > 200 ? errs.subList(0, 200) : errs);
+            throw new ValidationException(errs.size() + " problem(s) in the input", errs.size() > 200 ? errs.subList(0, 200) : errs);
         }
         return new Problem(hub, out, warns);
     }

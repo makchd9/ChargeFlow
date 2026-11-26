@@ -132,7 +132,7 @@ $('#addMaint').onclick = () => {
   h.slotCount = +$('#hubSlots').value;
   renderHub();
 });
-$('#hubReset').onclick = async () => { state.hub = await busy('Loading default hub…', () => api('/api/hub/default')); renderHub(); };
+$('#hubReset').onclick = async () => { const h = await busy('Loading default hub…', () => api('/api/hub/default')).catch(() => null); if (h) { state.hub = h; renderHub(); } };
 $('#hubFile').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
   try {
@@ -153,7 +153,8 @@ function setVehicles(vs, source) {
   $('#vehMix').innerHTML = (source ? `<span><b>${esc(source)}</b></span>` : '') +
     Object.entries(mix).map(([k, n]) => `<span>${esc(k)} <b>${n}</b></span>`).join('');
   const cols = ['plate', 'model', 'connector', 'arrival', 'departure', 'energyKwh', 'batteryPct', 'maxChargeKw', 'category'];
-  $('#vehTable thead').innerHTML = `<tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr>`;
+  const labels = ['Plate', 'Model', 'Connector', 'Arrive', 'Leave', 'Energy kWh', 'Battery %', 'Max kW', 'Category'];
+  $('#vehTable thead').innerHTML = `<tr>${labels.map(c => `<th>${c}</th>`).join('')}</tr>`;
   $('#vehTable tbody').innerHTML = vs.slice(0, 150).map(v => `<tr>${cols.map(c => `<td>${esc(v[c])}</td>`).join('')}</tr>`).join('') +
     (vs.length > 150 ? `<tr><td colspan="9" class="muted">… ${vs.length - 150} more</td></tr>` : '');
 }
@@ -161,14 +162,14 @@ function setVehicles(vs, source) {
 $('#genBtn').onclick = async () => {
   clearBanner();
   const r = await busy('Generating synthetic arrivals…', () => postJson('/api/vehicles/generate',
-    { count: +$('#genCount').value, seed: +$('#genSeed').value, registeredShare: +$('#genReg').value, hub: state.hub }));
-  setVehicles(r.vehicles, `synthetic · seed ${$('#genSeed').value}`);
+    { count: +$('#genCount').value, seed: +$('#genSeed').value, registeredShare: +$('#genReg').value, hub: state.hub })).catch(() => null);
+  if (r) setVehicles(r.vehicles, `synthetic · seed ${$('#genSeed').value}`);
 };
 
 async function parseCsv(text, name) {
   const r = await busy('Parsing CSV on the server…', () => api('/api/vehicles/parse', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: text }));
   if (r.errors.length) {
-    showError(`${r.errors.length} row(s) in ${name} could not be read. Nothing was imported: fix the file and upload it again.`, r.errors);
+    showError(`${name} has ${r.errors.length} problem(s). Nothing was imported: fix the file and upload it again.`, r.errors);
     return;
   }
   clearBanner();
@@ -230,7 +231,7 @@ function renderResult(r) {
   $('#kpis').innerHTML = [
     kpi('Charging slots delivered', `${fmt(s.servedSlots)} <span class="small muted">/ ${fmt(s.servableDemandSlots)}</span>`, `${fmt(pct, 1)}% of servable demand`, 'accent'),
     kpi('Energy delivered', `${fmt(s.energyDeliveredKwh)} kWh`, `of ${fmt(s.energyRequestedKwh)} kWh requested`),
-    kpi('Vehicles fully charged', `${fmt(s.fullyServed)} <span class="small muted">/ ${fmt(s.vehicles)}</span>`, `${fmt(s.partiallyServed)} partial · ${fmt(s.unserved)} none`),
+    kpi('Vehicles fully charged', `${fmt(s.fullyServed)} <span class="small muted">/ ${fmt(s.vehicles)}</span>`, `${fmt(s.partiallyServed)} partial · ${fmt(s.unserved)} none` + (s.vehicles - s.feasibleVehicles ? ` (${fmt(s.vehicles - s.feasibleVehicles)} infeasible)` : '')),
     kpi('Hub utilisation', `${fmt(s.utilisationPct, 1)}%`, 'of all module-slots'),
     kpi('Priority tier served', s.tier1Demand ? `${fmt(s.tier1Served)} / ${fmt(s.tier1Demand)}` : '–',
       r.priority.tierSize ? `${r.priority.tierSize} vehicles · score ≥ ${fmt(r.priority.threshold, 1)}` : 'tiers disabled'),

@@ -75,4 +75,30 @@ class ApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.errors[0]").value(org.hamcrest.Matchers.containsString("unknown connector")));
     }
+
+    @Test
+    @DisplayName("framework errors keep their 4xx status: 404 unknown path, 405 wrong method, 400 missing param, 415 wrong type")
+    void clientErrorsAreNot500() throws Exception {
+        mvc.perform(get("/api/does-not-exist")).andExpect(status().isNotFound());
+        mvc.perform(get("/api/allocate")).andExpect(status().isMethodNotAllowed());
+        mvc.perform(get("/api/registry/check")).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/vehicles/parse").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnsupportedMediaType());
+    }
+
+    @Test
+    @DisplayName("min-cut explanation names the limiting connector type (demo day: Type 2 AC, not CCS2)")
+    void bottleneckIsExplained() throws Exception {
+        String hub = mvc.perform(get("/api/hub/default")).andReturn().getResponse().getContentAsString();
+        String gen = mvc.perform(post("/api/vehicles/generate").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"count\":220,\"seed\":2026}")).andReturn().getResponse().getContentAsString();
+        ObjectNode body = json.createObjectNode();
+        body.set("hub", json.readTree(hub));
+        body.set("vehicles", json.readTree(gen).get("vehicles"));
+        String res = mvc.perform(post("/api/allocate").contentType(MediaType.APPLICATION_JSON).content(body.toString()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String expl = json.readTree(res).at("/minCut/explanation").asText();
+        assertTrue(expl.contains("Bottleneck: Type 2 AC"), expl);
+        assertTrue(expl.contains("Demand fully met for CCS2"), expl);
+    }
 }

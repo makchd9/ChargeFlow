@@ -4,6 +4,7 @@ import com.chargeflow.service.ValidationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -43,6 +44,13 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> other(Exception e) {
+        // Spring MVC's own client errors (unknown path 404, wrong method 405, wrong content type 415,
+        // missing parameter 400, ...) carry their status: report it instead of a misleading 500.
+        if (e instanceof ErrorResponse er && er.getStatusCode().is4xxClientError()) {
+            String detail = er.getBody().getDetail();
+            return body(HttpStatus.valueOf(er.getStatusCode().value()),
+                    detail != null ? detail : e.getMessage(), List.of());
+        }
         return body(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error: " + e.getClass().getSimpleName(),
                 List.of(String.valueOf(e.getMessage())));
     }

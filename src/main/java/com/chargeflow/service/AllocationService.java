@@ -98,12 +98,13 @@ public class AllocationService {
         CutSummary cut = null;
         if (main.minCut() != null) {
             SlotAllocation.CutInfo ci = main.minCut();
+            String advice = bottleneckAdvice(reqs, main, ci);
             cut = new CutSummary(ci.capacity(), main.totalServed(), ci.cutDemandSlots(), ci.cutCapacitySlots(),
                     ci.bindingStationSlots().size(),
                     "Max-flow = min-cut = " + ci.capacity() + " slots. " + ci.cutDemandSlots()
                             + " come from vehicles whose whole demand is met, and " + ci.cutCapacitySlots()
                             + " from saturated charger capacity in " + ci.bindingStationSlots().size()
-                            + " (connector, slot) pairs. No schedule can deliver more with the current capacity: extra modules would be needed in those binding slots.");
+                            + " (connector, slot) pairs. No schedule can deliver more with the current capacity: extra modules would be needed in those binding slots. " + advice);
         }
         if (tiering.tiers().size() > 1 && main.tierServedAfterOwnPhase()[0] != main.tierServed()[0]) {
             warnings.add("internal: tier-1 service changed after later phases");  // never expected; surfaced, not hidden
@@ -121,6 +122,31 @@ public class AllocationService {
         for (int t = 0; t < p.hub().slotCount(); t++) labels.add(p.hub().slotLabel(t));
         return new AllocationResult(label(algo), p.hub().name(), labels, summary, baseSummary, cmp, pr, regOut, cut,
                 stats, outcomes, schedule, loads, warnings);
+    }
+
+    /** Per-connector shortfall and binding slots, e.g. "Bottleneck: Type 2 AC (138/198 slots, 18 binding slots) ..." */
+    static String bottleneckAdvice(List<VehicleRequest> reqs, SlotAllocation a, SlotAllocation.CutInfo ci) {
+        Map<ConnectorType, long[]> d = new EnumMap<>(ConnectorType.class);     // [servable demand, served]
+        for (int i = 0; i < reqs.size(); i++) {
+            VehicleRequest r = reqs.get(i);
+            if (!r.feasible()) continue;
+            long[] x = d.computeIfAbsent(r.vehicle().connector(), k -> new long[2]);
+            x[0] += r.cappedDemand();
+            x[1] += a.slotsByVehicle().get(i).length;
+        }
+        Map<ConnectorType, Integer> binding = new EnumMap<>(ConnectorType.class);
+        for (String key : ci.bindingStationSlots()) binding.merge(ConnectorType.valueOf(key.split("@")[0]), 1, Integer::sum);
+        List<String> limited = new ArrayList<>(), met = new ArrayList<>();
+        for (Map.Entry<ConnectorType, long[]> e : d.entrySet()) {
+            String name = switch (e.getKey()) { case CCS2 -> "CCS2"; case TYPE2_AC -> "Type 2 AC"; case BHARAT_DC001 -> "Bharat DC-001"; };
+            long dem = e.getValue()[0], got = e.getValue()[1];
+            if (got < dem) limited.add(name + " (" + got + "/" + dem + " slots served, " + binding.getOrDefault(e.getKey(), 0) + " binding slots)");
+            else met.add(name);
+        }
+        String s = limited.isEmpty() ? "Every connector type's servable demand is fully met."
+                : "Bottleneck: " + String.join(", ", limited) + ": add modules of this type to serve more.";
+        if (!met.isEmpty() && !limited.isEmpty()) s += " Demand fully met for " + String.join(", ", met) + ", so extra modules there would not help.";
+        return s;
     }
 
     public static SlotAllocation run(AllocationOptions.Algorithm algo, HubConfig hub, List<VehicleRequest> reqs, List<List<Integer>> tiers) {
